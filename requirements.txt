@@ -1,0 +1,5 @@
+matplotlib>=3.5.3
+numpy
+ipython>=8.2.12
+pytest
+ipdb>=0.13.13
