@@ -7,18 +7,18 @@ from Kalman_Filter import KF_1D_kinematics as KF
 def Monte_Carlo_test(N:int) -> list:
 
     time = 100
-    location_error_mat = np.zeros((N,time))
-    vel_error_mat = np.zeros((N,time))
+    dt = 0.1
+    time_vec = np.arange(0,time+dt,dt)
+    location_error_mat = np.zeros((N,len(time_vec)))
+    vel_error_mat = np.zeros((N,len(time_vec)))
+    system_variance = 0.5 ** 2
+    measurement_variance = 5 ** 2
+    acceleration = 0.2
+    measure_timing = 20
 
     for iteration in range(N):
-
-        
-        dt = 0.1
         x_sys = 0
         v_sys = 1
-        acceleration = 4
-        system_variance = 3**2
-        measurement_variance = 4**2
 
         covariance = []
         state = []
@@ -27,11 +27,12 @@ def Monte_Carlo_test(N:int) -> list:
         state_error = []
         innovation = []
 
-        measure_timing = 20
+        kf = KF(initial_x = x_sys
+                ,initial_vx = v_sys
+                ,system_var = system_variance
+                ,accel = acceleration)
 
-        kf = KF(initial_x=x_sys,initial_vx=v_sys,system_var=system_variance,accel=acceleration)
-
-        for t in range(time):
+        for t in time_vec:
             
             #Data creation   
             real_x.append(x_sys)
@@ -41,9 +42,9 @@ def Monte_Carlo_test(N:int) -> list:
             state_error.append(np.array([x_sys,v_sys]).reshape(2,1) - kf.mean)
             kf.predict(dt=dt)
 
-            if t!=0 and t % measure_timing == 0:
-                kf.update(measurement= x_sys + np.random.rand() * np.sqrt(measurement_variance)  ,
-                meas_var=measurement_variance)
+            if int(t) != 0 and t % measure_timing == 0 and int(t) != time:
+                kf.update(measurement = x_sys + np.random.rand() * np.sqrt(measurement_variance)  ,
+                meas_var = measurement_variance)
                 innovation.append(kf.innovation)
         
             x_sys =  x_sys + v_sys * dt + 0.5 * acceleration * dt ** 2
@@ -67,51 +68,66 @@ err_location_data, err_velocity_data, loc_var, vel_var, covariance_loc, covarian
 
 #Plotting 5000 simulations
 
+time = 100
+measure_timing = 20
+# plt.figure()
+# plt.suptitle(r'Mote Carlo (5000 Simulations) - $\tilde{x}$')
+# plt.subplot(2,1,1)
+# plt.title('Location')
+# plt.plot(np.arange(0,time+0.1,0.1),err_location_data.T)
+# plt.xlabel('Time [s]', fontsize=12)
+# plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize=12)
+
+# plt.subplot(2,1,2)
+# plt.title('Velocity')
+# plt.plot(np.arange(0,time+0.1,0.1),err_velocity_data.T)
+# plt.xlabel('Time [s]', fontsize=12)
+# plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize=12)
+
+# plt.figure()
+# plt.suptitle(r'$\tilde{x}$ - Monte Carlo Vs. KF')
+# plt.subplot(2,1,1)
+# plt.plot(np.arange(0,time+0.1,0.1),np.mean(err_location_data.T,axis=1))
+# plt.plot(np.arange(0,time+0.1,0.1),kf_error_state)
+# plt.plot(np.arange(0,time+0.1,0.1),np.mean(err_location_data.T ,axis=1) + np.sqrt(loc_var), "--r")
+# plt.plot(np.arange(0,time+0.1,0.1),np.mean(err_location_data.T,axis=1) - np.sqrt(loc_var), "--r")
+# plt.title('Location')
+# plt.xlabel('Time [s]', fontsize=12)
+# plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize=12)
+# plt.legend(['Location - Monte Carlo','Location - KF','Location + STD (MC)'])
+
+
+# plt.subplot(2,1,2)
+# plt.plot(np.arange(0,time+0.1,0.1),np.mean(err_velocity_data.T,axis=1))
+# plt.plot(np.arange(0,time+0.1,0.1),kf_error_vel)
+# plt.plot(np.arange(0,time+0.1,0.1),np.mean(err_velocity_data.T ,axis=1) + np.sqrt(vel_var), "--r")
+# plt.plot(np.arange(0,time+0.1,0.1),np.mean(err_velocity_data.T,axis=1) - np.sqrt(vel_var), "--r")
+# plt.title('Velocity')
+# plt.xlabel('Time [s]', fontsize=12)
+# plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize=12)
+# plt.legend(['Velocity - Monte Carlo','Velocity - KF','Velocity + STD (MC)'])
 
 plt.figure()
-plt.suptitle(r'Mote Carlo (5000 Simulations) - $\tilde{x}$')
+plt.suptitle(r'$\sigma$ - Monte Carlo Vs. KF')
+
 plt.subplot(2,1,1)
+plt.plot(np.arange(0,time+0.1,0.1),np.sqrt(loc_var), "--r")
+plt.plot(np.arange(0,time+0.1,0.1),- np.sqrt(loc_var), "--r")
+plt.plot(np.arange(0,time+0.1,0.1),[np.sqrt(i) for i in covariance_loc], "--b")
+plt.plot(np.arange(0,time+0.1,0.1),[-np.sqrt(i) for i in covariance_loc], "--b")
+plt.legend(['Location - Monte Carlo',"",'Location - KF'])
 plt.title('Location')
-plt.plot(err_location_data.T)
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize=12)
-
-plt.subplot(2,1,2)
-plt.title('Velocity')
-plt.plot(err_velocity_data.T)
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize=12)
-
-plt.figure()
-plt.suptitle(r'$\tilde{x}$ - Monte Carlo Vs. KF')
-plt.subplot(2,1,1)
-plt.plot(np.mean(err_location_data.T,axis=1))
-plt.plot(kf_error_state)
-plt.plot(np.mean(err_location_data.T ,axis=1) + np.sqrt(loc_var), "--r")
-plt.plot(np.mean(err_location_data.T,axis=1) - np.sqrt(loc_var), "--r")
-plt.title('Location')
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize=12)
-plt.legend(['Location - Monte Carlo','Location - KF','Location + STD (MC)'])
-
-
-plt.subplot(2,1,2)
-plt.plot(np.mean(err_velocity_data.T,axis=1))
-plt.plot(kf_error_vel)
-plt.plot(np.mean(err_velocity_data.T ,axis=1) + np.sqrt(vel_var), "--r")
-plt.plot(np.mean(err_velocity_data.T,axis=1) - np.sqrt(vel_var), "--r")
-plt.title('Velocity')
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize=12)
-plt.legend(['Velocity - Monte Carlo','Velocity - KF','Velocity + STD (MC)'])
-
-plt.figure()
-plt.plot(np.sqrt(loc_var), "--r")
-plt.plot(- np.sqrt(loc_var), "--r")
-plt.plot([np.sqrt(i) for i in covariance_vel], "--b")
-plt.plot([-np.sqrt(i) for i in covariance_vel], "--b")
-plt.title(r'$\sigma$ - Monte Carlo Vs. KF (Location)')
 plt.xlabel('Time [s]', fontsize=12)
 plt.ylabel('STD', fontsize=12)
+
+plt.subplot(2,1,2)
+plt.plot(np.arange(0,time+0.1,0.1),np.sqrt(vel_var), "--r")
+plt.plot(np.arange(0,time+0.1,0.1),- np.sqrt(vel_var), "--r")
+plt.plot(np.arange(0,time+0.1,0.1),[np.sqrt(i) for i in covariance_vel], "--b")
+plt.plot(np.arange(0,time+0.1,0.1),[-np.sqrt(i) for i in covariance_vel], "--b")
+plt.title('Velocity')
+plt.xlabel('Time [s]', fontsize=12)
+plt.ylabel('STD', fontsize=12)
+plt.legend(['Location - Monte Carlo',"",'Location - KF'])
 
 plt.show()

@@ -3,3 +3,4 @@ numpy
 ipython>=8.2.12
 pytest
 ipdb>=0.13.13
+scipy

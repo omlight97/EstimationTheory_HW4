@@ -16,6 +16,11 @@ class KF_1D_kinematics:
         self.accel = accel
         self.system_var = system_var
         self._innovation = []
+        self._delta = 0
+        self._delayed_state = []
+        self._delayed_P = []
+        self._time_passed = 0
+        self._timer = False
 
     def predict(self, dt: float) -> None:
         """
@@ -30,8 +35,19 @@ class KF_1D_kinematics:
         predicted_state = Phi.dot(self.state)+Gamma.dot(self.accel)
         predicted_P = Phi.dot(self.P).dot(Phi.T)+Psi.dot(self.system_var).dot(Psi.T)
 
-        self.state= predicted_state
-        self.P = predicted_P
+        if self._timer and int(self._time_passed) - self._delta == 0:
+            self.state= self._delayed_state
+            self.P = self._delayed_P
+            self._delta = 0
+            self._time_passed = 0
+            self._timer = False
+        elif self._timer and int(self._time_passed) - self._delta != 0:
+            self._time_passed = self._time_passed + dt
+            self.state= predicted_state
+            self.P = predicted_P
+        else:
+            self.state= predicted_state
+            self.P = predicted_P
 
     def update(self,measurement: float ,meas_var: float) -> None:
         """
@@ -43,11 +59,9 @@ class KF_1D_kinematics:
         H = np.array([1,0]).reshape((1,2))
         z = np.array([measurement])
 
-        #import ipdb; ipdb.set_trace()
-
         self._innovation = z - H.dot(self.state)
-        R = np.array(meas_var)
 
+        R = np.array(meas_var)
 
         S = H.dot(self.P).dot(H.T) + R
 
@@ -62,6 +76,39 @@ class KF_1D_kinematics:
         self.state = updated_state
         self.P = updated_P
 
+    def delayed_update(self,measurement: float ,meas_var: float, delay: float, dt:float) -> None:
+        """
+        Updates the state of the system according to KF model, using a measurement
+         Args:
+            measurement(float): measurement of the location at specific time 
+            # meas_var(float): variance of the virtual sensors' white gaussian noise
+        """
+        self._delta = delay
+
+        H = np.array([1,0]).reshape((1,2))
+
+        z = np.array([measurement])
+
+        self._dinnovation = z - H.dot(self.state)
+        
+        R = np.array(meas_var)
+
+        S = H.dot(self.P).dot(H.T) + R
+
+        K_gain = self.P.dot(H.T).dot(np.linalg.inv(S))
+        
+        y = np.eye(2) - K_gain.dot(H)
+
+        updated_state = self.state + K_gain.dot((z - H.dot(self.state)))
+
+        updated_P = y.dot(self.P).dot(y.T) + K_gain.dot(R).dot(K_gain.T)
+        
+        self._delayed_state = updated_state
+        self._delayed_P = updated_P
+
+        KF_1D_kinematics.predict(self, dt=dt)
+        self._timer = True
+        
 
     @property
     def covariance(self) -> np.array:
@@ -74,5 +121,9 @@ class KF_1D_kinematics:
     @property
     def innovation(self) -> np.array:
         return self._innovation
+    
+    @property
+    def dinnovation(self) -> np.array:
+        return self._dinnovation
         
 
