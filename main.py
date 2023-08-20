@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 from Kalman_Filter import KF_1D_kinematics as KF
 from scipy.stats import rv_discrete
 
-different_ic_flag = True
+different_ic_flag = False
 accel_change_flag = False
+delta_flag_constant = False
+delta_flag_random = True
 
 
 time = 100
@@ -19,11 +21,10 @@ system_variance = 0.5**2
 measurement_variance = 5**2
 measure_timing = 20
 
-delay = 0 #constant
-
+delay = 8 #constant
 #random delay
-# values_of_delay = [i for i in np.linspace(1,8,8)] 
-# delay = rv_discrete(name = 'uniform',values = (values_of_delay,[1 / len(values_of_delay) for _ in range(len(values_of_delay))]))
+values_of_delay = [i for i in np.linspace(1,8,8)] 
+delay_rnd = rv_discrete(name = 'uniform',values = (values_of_delay,[1 / len(values_of_delay) for _ in range(len(values_of_delay))]))
 
 covariance = []
 state = []
@@ -60,13 +61,15 @@ for t in time_vec:
     kf.predict(dt=dt)
     
 
-    if int(t) != 0 and t % measure_timing == 0 and int(t) != time and not(delay):
+    if int(t) != 0 and t % measure_timing == 0 and int(t) != time and not(delta_flag_constant) and not(delta_flag_random):
         kf.update(measurement = x_sys + np.random.rand() * np.sqrt(measurement_variance)  ,
         meas_var = measurement_variance)
         innovation.append(kf.innovation)
     elif int(t) != 0 and t % measure_timing == 0 and int(t) != time:
-        # delta = delay.rvs() #random
-        delta = delay #constant
+        if delta_flag_constant:
+            delta = delay #constant
+        else:
+            delta = delay_rnd.rvs() #random
         kf.delayed_update(measurement = x_sys + np.random.rand() * np.sqrt(measurement_variance)  ,
         meas_var = measurement_variance, delay = delta, dt=dt)
         innovation.append(kf.dinnovation)
@@ -85,10 +88,11 @@ plt.plot(time_vec,[x_tmp[0] for x_tmp in state], "b")
 plt.plot(time_vec,real_x, "g")
 plt.plot(time_vec,[x_tmp[0] +  np.sqrt(cov_tmp[0, 0]) for x_tmp, cov_tmp in zip(state, covariance)], 'r--')
 plt.plot(time_vec,[x_tmp[0] -  np.sqrt(cov_tmp[0, 0]) for x_tmp, cov_tmp in zip(state, covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize = 12)
-plt.ylabel('X [m]', fontsize = 12)
+plt.xlabel('Time [s]', fontsize = 8)
+plt.ylabel('X [m]', fontsize =  8)
 plt.grid(True)
 plt.legend(['Location from KF','Real Location','Estimator + STD'])
+
 
 plt.subplot(2,1,2)
 plt.title("Vx(t)")
@@ -96,10 +100,12 @@ plt.plot(time_vec,[v_tmp[1] for v_tmp in state], "b")
 plt.plot(time_vec,real_vx, "g")
 plt.plot(time_vec,[v_tmp[1] +  np.sqrt(cov_tmp[1, 1]) for v_tmp, cov_tmp in zip(state, covariance)], 'r--')
 plt.plot(time_vec,[v_tmp[1] -  np.sqrt(cov_tmp[1, 1]) for v_tmp, cov_tmp in zip(state, covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize = 12)
-plt.ylabel('Vx [m/s]', fontsize = 12)
+plt.xlabel('Time [s]', fontsize =  8)
+plt.ylabel('Vx [m/s]', fontsize =  8)
 plt.grid(True)
 plt.legend(['Velocity from KF','Real Velocity','Estimator + STD'])
+
+plt.subplots_adjust(hspace = 0.5)
 
 plt.figure()
 
@@ -109,8 +115,8 @@ plt.title(r'system error - Location $\tilde{x}$')
 plt.plot(time_vec,[i[0][0] for i in state_error], "b")
 plt.plot(time_vec,[err_tmp[0] + np.sqrt(cov_tmp[0, 0]) for err_tmp,cov_tmp in zip(state_error,covariance)], 'r--')
 plt.plot(time_vec,[err_tmp[0] - np.sqrt(cov_tmp[0, 0]) for err_tmp,cov_tmp in zip(state_error,covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize = 12)
-plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize = 12)
+plt.xlabel('Time [s]', fontsize =  8)
+plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize =  8)
 plt.legend(['Location','STD'])
 
 
@@ -124,11 +130,14 @@ plt.xlabel('Time [s]', fontsize = 12)
 plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize = 12)
 plt.legend(['Velocity','STD'])
 
+plt.subplots_adjust(hspace = 0.5)
+
 plt.figure()
+
 plt.grid(True)
 plt.title(r'Innovation $\tilde{z}$')
 plt.scatter(list([np.arange(measure_timing,time,measure_timing)][0]),[i[0][0] for i in innovation])
-plt.xlabel('Time [s]', fontsize = 12)
-plt.ylabel(r'$\tilde{z} [m]$', fontsize = 12)
+plt.xlabel('Time [s]', fontsize =  8)
+plt.ylabel(r'$\tilde{z} [m]$', fontsize =  8)
 
 plt.show()
