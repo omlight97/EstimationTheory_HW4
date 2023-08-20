@@ -71,9 +71,10 @@ for t in time_vec:
         meas_var = measurement_variance, delay = delta, dt=dt)
         innovation.append(kf.dinnovation)
         print(f"update at time = {int(t)} seconds was made with a delay of {delta} seconds")
-  
-    x_sys =  x_sys + v_sys * dt + 0.5 * acceleration * dt ** 2
-    v_sys = v_sys + acceleration * dt
+
+    acceleration_with_noise = acceleration + np.random.normal(scale = system_variance)
+    x_sys =  x_sys + v_sys * dt + 0.5 * acceleration_with_noise * dt ** 2
+    v_sys = v_sys + acceleration_with_noise * dt
 
 #plotting
 plt.figure()
@@ -84,8 +85,8 @@ plt.plot(time_vec,[x_tmp[0] for x_tmp in state], "b")
 plt.plot(time_vec,real_x, "g")
 plt.plot(time_vec,[x_tmp[0] +  np.sqrt(cov_tmp[0, 0]) for x_tmp, cov_tmp in zip(state, covariance)], 'r--')
 plt.plot(time_vec,[x_tmp[0] -  np.sqrt(cov_tmp[0, 0]) for x_tmp, cov_tmp in zip(state, covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel('X [m]', fontsize=12)
+plt.xlabel('Time [s]', fontsize = 12)
+plt.ylabel('X [m]', fontsize = 12)
 plt.grid(True)
 plt.legend(['Location from KF','Real Location','Estimator + STD'])
 
@@ -95,8 +96,8 @@ plt.plot(time_vec,[v_tmp[1] for v_tmp in state], "b")
 plt.plot(time_vec,real_vx, "g")
 plt.plot(time_vec,[v_tmp[1] +  np.sqrt(cov_tmp[1, 1]) for v_tmp, cov_tmp in zip(state, covariance)], 'r--')
 plt.plot(time_vec,[v_tmp[1] -  np.sqrt(cov_tmp[1, 1]) for v_tmp, cov_tmp in zip(state, covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel('Vx [m/s]', fontsize=12)
+plt.xlabel('Time [s]', fontsize = 12)
+plt.ylabel('Vx [m/s]', fontsize = 12)
 plt.grid(True)
 plt.legend(['Velocity from KF','Real Velocity','Estimator + STD'])
 
@@ -108,8 +109,8 @@ plt.title(r'system error - Location $\tilde{x}$')
 plt.plot(time_vec,[i[0][0] for i in state_error], "b")
 plt.plot(time_vec,[err_tmp[0] + np.sqrt(cov_tmp[0, 0]) for err_tmp,cov_tmp in zip(state_error,covariance)], 'r--')
 plt.plot(time_vec,[err_tmp[0] - np.sqrt(cov_tmp[0, 0]) for err_tmp,cov_tmp in zip(state_error,covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize=12)
+plt.xlabel('Time [s]', fontsize = 12)
+plt.ylabel(r'$\tilde{x}$ Location [m]', fontsize = 12)
 plt.legend(['Location','STD'])
 
 
@@ -119,15 +120,15 @@ plt.title(r'system error - Velocity $\tilde{x}$')
 plt.plot(time_vec,[i[1][0] for i in state_error], "b")
 plt.plot(time_vec,[err_tmp[1] + np.sqrt(cov_tmp[1, 1]) for err_tmp,cov_tmp in zip(state_error,covariance)], 'r--')
 plt.plot(time_vec,[err_tmp[1] - np.sqrt(cov_tmp[1, 1]) for err_tmp,cov_tmp in zip(state_error,covariance)], 'r--')
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize=12)
+plt.xlabel('Time [s]', fontsize = 12)
+plt.ylabel(r'$\tilde{x}$ Velocity [m/s]', fontsize = 12)
 plt.legend(['Velocity','STD'])
 
 plt.figure()
 plt.grid(True)
 plt.title(r'Innovation $\tilde{z}$')
 plt.scatter(list([np.arange(measure_timing,time,measure_timing)][0]),[i[0][0] for i in innovation])
-plt.xlabel('Time [s]', fontsize=12)
-plt.ylabel(r'$\tilde{z} [m]$', fontsize=12)
+plt.xlabel('Time [s]', fontsize = 12)
+plt.ylabel(r'$\tilde{z} [m]$', fontsize = 12)
 
 plt.show()
